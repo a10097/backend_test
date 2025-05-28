@@ -170,6 +170,10 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
+@app.get("/")
+async def read_root():
+    return {"message": "Hello from Salddelring API!"}
+
 
 @app.post("/register")
 def register(user: UserCreate):
