@@ -1,5 +1,9 @@
 name: Build and deploy Python app to Azure Web App - salddelring
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+  
 env:
   AZURE_WEBAPP_NAME: salddelring   # Azure 포털의 앱 이름
   PYTHON_VERSION: '3.9'            # Python 버전
