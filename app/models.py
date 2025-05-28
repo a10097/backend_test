@@ -1,4 +1,3 @@
-# recommendation_api.py (업데이트: models 없이 사용자 재료 기반 추천)
 
 from datetime import datetime
 import mysql.connector
@@ -9,19 +8,39 @@ import jwt
 import os
 from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from typing import Dict, Any, List
+from dotenv import load_dotenv # <<--- 이 줄 추가
 
 from . import models
 from . import processing
 
+load_dotenv() # <<--- 이 줄 추가
+
 router = APIRouter()
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecret")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
 
 # --- 공통 유틸 함수들 ---
 def get_connection():
+    db_host = os.getenv("DB_HOST")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_name = os.getenv("DB_NAME")
+    ssl_ca_path = os.getenv("DB_SSL_CA") # SSL CA 인증서 파일 경로
+
+    # 경고 메시지 추가 (main.py와 동일)
+    if not os.path.exists(ssl_ca_path):
+        print(f"경고: SSL CA 파일이 {ssl_ca_path}에서 발견되지 않았습니다. 연결 문제가 발생할 수 있습니다.")
+
+
     return mysql.connector.connect(
-        host="localhost", user="root", password="kjm10091009@M@", database="test"
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database=db_name,
+        port=3306, # 표준 MySQL 포트
+        ssl_ca=ssl_ca_path,
+        ssl_mode='REQUIRED' # Azure MySQL의 경우 항상 SSL을 강제합니다.
     )
 
 def get_user_profile(user_id: int):
