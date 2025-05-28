@@ -14,10 +14,11 @@ import mysql.connector
 from dotenv import load_dotenv
 
 
+# 환경변수 로드
+load_dotenv()
+
 #  수정된 부분: recommendation_api 라우터 추가
 from app.recommendation_api import router as recommendation_router
-
-
 
 
 # Redis 클라이언트 설정
@@ -26,9 +27,6 @@ redis_client = redis.Redis(
     port=int(os.getenv("REDIS_PORT", 6379)),
     decode_responses=True
 )
-
-# 환경변수 로드
-load_dotenv()
 
 app = FastAPI()
 
@@ -143,17 +141,35 @@ app.add_middleware(
 
 # DB 연결 함수
 def get_connection():
+    db_host = os.getenv("DB_HOST")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_name = os.getenv("DB_NAME")
+    ssl_ca_path = os.getenv("DB_SSL_CA") 
+
+    if not os.path.exists(ssl_ca_path):
+        print(f"경고: SSL CA 파일이 {ssl_ca_path}에서 발견되지 않았습니다. 연결 문제가 발생할 수 있습니다.")
+        
     return mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='5048',
-        database='test'
-    )
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database=db_name,
+        port=3306, # 표준 MySQL 포트
+        ssl_ca=ssl_ca_path,
+        ssl_mode='REQUIRED'
+    )    
+
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecret")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("JWT_SECRET_KEY 환경 변수가 설정되지 않았습니다. 설정해 주십시오.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
 
 @app.post("/register")
 def register(user: UserCreate):
@@ -175,7 +191,7 @@ def register(user: UserCreate):
     conn.commit()
     cursor.close()
     conn.close()
-    return {"msg": "회원가입의 성공했습니다."}
+    return {"msg": "회원가입이 성공했습니다."}
 
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
