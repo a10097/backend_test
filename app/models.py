@@ -40,7 +40,6 @@ def get_connection():
         database=db_name,
         port=3306, # 표준 MySQL 포트
         ssl_ca=ssl_ca_path,
-        ssl_mode='REQUIRED' # Azure MySQL의 경우 항상 SSL을 강제합니다.
     )
 
 def get_user_profile(user_id: int):
