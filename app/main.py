@@ -157,7 +157,6 @@ def get_connection():
         database=db_name,
         port=3306, # 표준 MySQL 포트
         ssl_ca=ssl_ca_path,
-        ssl_mode='REQUIRED'
     )    
 
 
