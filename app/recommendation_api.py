@@ -11,9 +11,12 @@ from typing import Dict, Any
 from pydantic import BaseModel
 from typing import List
 from enum import Enum
-
+from dotenv import load_dotenv 
 from . import models
 from . import processing
+
+load_dotenv() 
+
 
 #터미널 체크용
 import pprint
@@ -21,7 +24,9 @@ import pprint
 router = APIRouter()
 
 # JWT 설정 (main.py와 동일)
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecret")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("JWT_SECRET_KEY 환경 변수가 설정되지 않았습니다. 설정해 주십시오.")
 ALGORITHM = "HS256"
 
 
@@ -57,11 +62,24 @@ def get_artifacts() -> Dict[str, Any]:
 
 def get_user_profile(user_id: int):
     """user_profiles 테이블에서 사용자 프로필 정보 조회"""
+    db_host = os.getenv("DB_HOST")
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_name = os.getenv("DB_NAME")
+    ssl_ca_path = os.getenv("DB_SSL_CA")
+
+    # SSL CA 파일 경로 유효성 검사 (main.py와 동일하게)
+    if not os.path.exists(ssl_ca_path):
+        print(f"경고: SSL CA 파일이 {ssl_ca_path}에서 발견되지 않았습니다. 연결 문제가 발생할 수 있습니다.")
+
     conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="1509",
-        database="test"
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database=db_name,
+        port=3306, # 표준 MySQL 포트
+        ssl_ca=ssl_ca_path,
+        ssl_mode='REQUIRED' # Azure MySQL의 경우 항상 SSL을 강제합니다.
     )
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -113,11 +131,20 @@ async def predict_top10_recipes(
             raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
         
         # 2. user_email로 user_id 조회
+        db_host = os.getenv("DB_HOST")
+        db_user = os.getenv("DB_USER")
+        db_password = os.getenv("DB_PASSWORD")
+        db_name = os.getenv("DB_NAME")
+        ssl_ca_path = os.getenv("DB_SSL_CA")
+
         conn = mysql.connector.connect(
-            host="localhost",
-            user="root", 
-            password="1509",
-            database="test"
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database=db_name,
+            port=3306, # MySQL 기본 포트
+            ssl_ca=ssl_ca_path,
+            ssl_mode='REQUIRED'
         )
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT id FROM users WHERE email = %s", (user_email,))
@@ -138,10 +165,13 @@ async def predict_top10_recipes(
 
         # 4.1 DB에서 메뉴별 재료정보 집계
         conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="1509",
-            database="test"
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database=db_name,
+            port=3306, # MySQL 기본 포트
+            ssl_ca=ssl_ca_path,
+            ssl_mode='REQUIRED'
         )
         cursor = conn.cursor(dictionary=True)
         ingredient_query = """
@@ -160,10 +190,13 @@ async def predict_top10_recipes(
 
     # 4.2 DB에서 menus 테이블의 영양 정보 가져오기
         conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="1509",
-            database="test"
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database=db_name,
+            port=3306, # MySQL 기본 포트
+            ssl_ca=ssl_ca_path,
+            ssl_mode='REQUIRED'
         )
         cursor = conn.cursor(dictionary=True)
         nutrition_query = """
@@ -210,10 +243,13 @@ async def predict_top10_recipes(
             def get_ingredient_prices():
                 """ingredient_data 테이블에서 모든 재료의 가격 정보를 가져와서 딕셔너리로 반환"""
                 conn = mysql.connector.connect(
-                    host="localhost",
-                    user="root", 
-                    password="1509",
-                    database="test"
+                    host=db_host,
+                    user=db_user,
+                    password=db_password,
+                    database=db_name,
+                    port=3306, # MySQL 기본 포트
+                    ssl_ca=ssl_ca_path,
+                    ssl_mode='REQUIRED'
                 )
                 cursor = conn.cursor(dictionary=True)
                         
