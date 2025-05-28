@@ -14,11 +14,10 @@ import mysql.connector
 from dotenv import load_dotenv
 
 
-# 환경변수 로드
-load_dotenv()
-
 #  수정된 부분: recommendation_api 라우터 추가
 from app.recommendation_api import router as recommendation_router
+
+
 
 
 # Redis 클라이언트 설정
@@ -27,6 +26,9 @@ redis_client = redis.Redis(
     port=int(os.getenv("REDIS_PORT", 6379)),
     decode_responses=True
 )
+
+# 환경변수 로드
+load_dotenv()
 
 app = FastAPI()
 
@@ -141,39 +143,17 @@ app.add_middleware(
 
 # DB 연결 함수
 def get_connection():
-    db_host = os.getenv("DB_HOST")
-    db_user = os.getenv("DB_USER")
-    db_password = os.getenv("DB_PASSWORD")
-    db_name = os.getenv("DB_NAME")
-    ssl_ca_path = os.getenv("DB_SSL_CA") 
-
-    if not os.path.exists(ssl_ca_path):
-        print(f"경고: SSL CA 파일이 {ssl_ca_path}에서 발견되지 않았습니다. 연결 문제가 발생할 수 있습니다.")
-        
     return mysql.connector.connect(
-        host=db_host,
-        user=db_user,
-        password=db_password,
-        database=db_name,
-        port=3306, # 표준 MySQL 포트
-        ssl_ca=ssl_ca_path,
-        ssl_mode='REQUIRED'
-    )    
-
-
+        host='localhost',
+        user='root',
+        password='5048',
+        database='test'
+    )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not SECRET_KEY:
-    raise ValueError("JWT_SECRET_KEY 환경 변수가 설정되지 않았습니다. 설정해 주십시오.")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-@app.get("/")
-async def read_root():
-    return {"message": "Hello from Salddelring API!"}
-
 
 @app.post("/register")
 def register(user: UserCreate):
@@ -195,7 +175,7 @@ def register(user: UserCreate):
     conn.commit()
     cursor.close()
     conn.close()
-    return {"msg": "회원가입이 성공했습니다."}
+    return {"msg": "회원가입의 성공했습니다."}
 
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -362,73 +342,3 @@ def reset_password(req: PasswordResetRequest):
 
     redis_client.delete(f"verify:{req.email}")
     return {"msg": "비밀번호가 성공적으로 재설정되었습니다!"}
-@app.post("/profile-info")
-def save_profile_info(profile: UserProfile, Authorization: str = Header(...)):
-    # 1. 사용자 인증 (JWT 토큰 디코드)
-    token = Authorization.split(" ")[1]
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_email = payload.get("sub")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
-
-    # 2. 사용자 ID 조회
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE email = %s", (user_email,))
-    result = cursor.fetchone()
-    if not result:
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-    
-    user_id = result[0]
-    now = datetime.now()
-
-    # 3. TDEE 및 영양소 계산
-    tdee = calculate_tdee(
-        profile.height_cm,
-        profile.weight_kg,
-        profile.birth_year,
-        profile.gender,
-        profile.pal_value
-    )
-    target_protein_g, target_fat_g = calculate_macros(tdee)
-
-    # 4. DB 저장 (있으면 업데이트)
-    cursor.execute("""
-        INSERT INTO user_profiles (
-            user_id, height_cm, weight_kg, birth_year, gender, pal_value,
-            tdee, target_protein_total_g, target_fat_total_g, created_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE
-            height_cm = VALUES(height_cm),
-            weight_kg = VALUES(weight_kg),
-            birth_year = VALUES(birth_year),
-            gender = VALUES(gender),
-            pal_value = VALUES(pal_value),
-            tdee = VALUES(tdee),
-            target_protein_total_g = VALUES(target_protein_total_g),
-            target_fat_total_g = VALUES(target_fat_total_g),
-            created_at = VALUES(created_at)
-    """, (
-        user_id,
-        profile.height_cm,
-        profile.weight_kg,
-        profile.birth_year,
-        profile.gender,
-        profile.pal_value,
-        tdee,
-        target_protein_g,
-        target_fat_g,
-        now
-    ))
-
-    # 5. 정리 및 응답
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    return {
-        "msg": f"프로필 저장 완료 (TDEE: {tdee} kcal, 단백질: {target_protein_g}g, 지방: {target_fat_g}g)"
-    }
