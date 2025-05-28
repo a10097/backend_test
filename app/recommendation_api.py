@@ -79,7 +79,6 @@ def get_user_profile(user_id: int):
         database=db_name,
         port=3306, # 표준 MySQL 포트
         ssl_ca=ssl_ca_path,
-        ssl_mode='REQUIRED' # Azure MySQL의 경우 항상 SSL을 강제합니다.
     )
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -144,7 +143,6 @@ async def predict_top10_recipes(
             database=db_name,
             port=3306, # MySQL 기본 포트
             ssl_ca=ssl_ca_path,
-            ssl_mode='REQUIRED'
         )
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT id FROM users WHERE email = %s", (user_email,))
@@ -171,7 +169,6 @@ async def predict_top10_recipes(
             database=db_name,
             port=3306, # MySQL 기본 포트
             ssl_ca=ssl_ca_path,
-            ssl_mode='REQUIRED'
         )
         cursor = conn.cursor(dictionary=True)
         ingredient_query = """
@@ -196,7 +193,6 @@ async def predict_top10_recipes(
             database=db_name,
             port=3306, # MySQL 기본 포트
             ssl_ca=ssl_ca_path,
-            ssl_mode='REQUIRED'
         )
         cursor = conn.cursor(dictionary=True)
         nutrition_query = """
@@ -249,7 +245,6 @@ async def predict_top10_recipes(
                     database=db_name,
                     port=3306, # MySQL 기본 포트
                     ssl_ca=ssl_ca_path,
-                    ssl_mode='REQUIRED'
                 )
                 cursor = conn.cursor(dictionary=True)
                         
