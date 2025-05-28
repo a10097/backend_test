@@ -74,4 +74,4 @@ jobs:
           app-name: 'salddelring'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9EBBD06BC8EA4ABC8D8E0DFC049FF24A }}
-          package : ./app
+          package : .
